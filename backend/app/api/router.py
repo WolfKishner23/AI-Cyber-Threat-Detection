@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import security_events, alerts
+from app.api.endpoints import security_events, alerts, detection, investigations
 
 api_router = APIRouter()
 
@@ -13,4 +13,14 @@ api_router.include_router(
     alerts.router,
     prefix="/alerts",
     tags=["Alerts"]
+)
+api_router.include_router(
+    detection.router,
+    prefix="/detection",
+    tags=["Detection Engine"]
+)
+api_router.include_router(
+    investigations.router,
+    prefix="/investigations",
+    tags=["Investigations"]
 )
