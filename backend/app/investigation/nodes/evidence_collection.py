@@ -1,52 +1,60 @@
 from app.investigation.state import InvestigationState
 from sqlalchemy.orm import Session
-from app.models.security_event import SecurityEvent
-from app.models.alert import Alert
 from langchain_core.runnables.config import RunnableConfig
+from app.tools import (
+    get_user_history,
+    get_device_history,
+    get_location_history,
+    get_previous_alerts,
+    get_incident_history,
+    get_ip_reputation
+)
 
 def collect_evidence(state: InvestigationState, config: RunnableConfig) -> InvestigationState:
-    """Gather contextual evidence from the database."""
+    """Gather contextual evidence using Tools."""
     db: Session = config["configurable"]["db"]
     event_data = state.get("security_event", {})
     user_id = event_data.get("user_id")
-    current_event_id = event_data.get("id")
+    ip_address = event_data.get("ip_address")
     
-    evidence = {}
     trace = state.get("reasoning_trace", [])
     
+    # 1. Execute tools
+    user_history = get_user_history(db, user_id) if user_id else {}
+    device_history = get_device_history(db, user_id) if user_id else {}
+    location_history = get_location_history(db, user_id) if user_id else {}
+    previous_alerts = get_previous_alerts(db, user_id) if user_id else {}
+    incident_history = get_incident_history(db, user_id) if user_id else {}
+    ip_rep = get_ip_reputation(ip_address) if ip_address else {}
+    
+    # 2. Store raw tool outputs
+    tool_outputs = {
+        "user_history": user_history,
+        "device_history": device_history,
+        "location_history": location_history,
+        "previous_alerts": previous_alerts,
+        "incident_history": incident_history,
+        "ip_reputation": ip_rep
+    }
+    
+    # 3. Aggregate into Evidence Structure
+    evidence = {
+        "user_history": user_history,
+        "device_history": device_history,
+        "location_history": location_history,
+        "previous_alerts": previous_alerts,
+        "incident_history": incident_history,
+        "ip_reputation": ip_rep
+    }
+    
     if user_id:
-        # Get last 10 events for user
-        recent_events = db.query(SecurityEvent).filter(
-            SecurityEvent.user_id == user_id,
-            SecurityEvent.id != current_event_id
-        ).order_by(SecurityEvent.timestamp.desc()).limit(10).all()
-        
-        evidence["recent_events"] = [{"id": e.id, "type": e.event_type, "timestamp": e.timestamp.isoformat(), "ip": e.ip_address} for e in recent_events]
-        
-        # Get previous locations
-        locations = db.query(SecurityEvent.location).filter(
-            SecurityEvent.user_id == user_id, SecurityEvent.location.isnot(None)
-        ).distinct().all()
-        evidence["locations"] = [loc[0] for loc in locations]
-        
-        # Get previous devices
-        devices = db.query(SecurityEvent.device_name).filter(
-            SecurityEvent.user_id == user_id, SecurityEvent.device_name.isnot(None)
-        ).distinct().all()
-        evidence["devices"] = [dev[0] for dev in devices]
-        
-        # Get previous alerts
-        previous_alerts = db.query(Alert).join(SecurityEvent).filter(
-            SecurityEvent.user_id == user_id,
-            Alert.event_id != current_event_id
-        ).all()
-        evidence["previous_alerts"] = [{"id": a.id, "type": a.alert_type, "severity": a.severity} for a in previous_alerts]
-        
-        trace.append(f"Evidence Collection Agent: Queried database for user {user_id}. Found {len(recent_events)} recent events and {len(previous_alerts)} previous alerts.")
+        trace.append(f"Evidence Collection Agent: Executed tools for user {user_id}. Gathered {user_history.get('event_count', 0)} recent events and {previous_alerts.get('alert_count', 0)} previous alerts.")
     else:
-        trace.append("Evidence Collection Agent: No user_id found to collect evidence.")
+        trace.append("Evidence Collection Agent: No user_id found. Tools returned empty sets.")
         
     return {
         "evidence": evidence,
+        "tool_outputs": tool_outputs,
         "reasoning_trace": trace
     }
+

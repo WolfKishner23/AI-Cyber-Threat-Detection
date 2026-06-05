@@ -11,3 +11,4 @@ class InvestigationState(TypedDict):
     recommended_action: str
     investigation_status: str
     reasoning_trace: List[str]
+    tool_outputs: Dict[str, Any]

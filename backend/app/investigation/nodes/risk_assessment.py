@@ -10,7 +10,8 @@ def assess_risk(state: InvestigationState) -> InvestigationState:
     risk_score = 0
     confidence_score = 80  # Heuristic default
     
-    previous_alerts = evidence.get("previous_alerts", [])
+    previous_alerts_dict = evidence.get("previous_alerts", {})
+    alert_count = previous_alerts_dict.get("alert_count", 0)
     
     if alert_type == "brute_force" or alert_type == "credential_compromise":
         risk_score = 95
@@ -25,7 +26,7 @@ def assess_risk(state: InvestigationState) -> InvestigationState:
         risk_score = 50
         trace.append("Risk Assessment Agent: Assigned default risk (50).")
         
-    if len(previous_alerts) > 0:
+    if alert_count > 0:
         risk_score = min(100, risk_score + 15)
         trace.append("Risk Assessment Agent: Increased risk score due to previous alerts on this user.")
         

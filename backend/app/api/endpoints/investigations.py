@@ -59,5 +59,6 @@ def run_investigation(alert_id: int, db: Session = Depends(get_db)):
         recommended_action=final_state.get("recommended_action", ""),
         investigation_summary=final_state.get("investigation_summary", ""),
         evidence=final_state.get("evidence", {}),
+        tool_outputs=final_state.get("tool_outputs", {}),
         reasoning_trace=final_state.get("reasoning_trace", [])
     )

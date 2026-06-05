@@ -59,14 +59,23 @@ def test_investigation_graph_workflow(session: Session):
     # Execute graph
     final_state = investigation_graph.invoke(initial_state, config=config)
     
-    assert final_state["risk_score"] == 95
+    assert final_state["risk_score"] == 100
     assert final_state["recommended_action"] == "lock_account"
     assert "in_progress" not in final_state["investigation_status"]
     assert final_state["investigation_status"] == "completed"
     assert "brute_force" in final_state["investigation_summary"]
     
-    # Check evidence collection
-    assert "recent_events" in final_state["evidence"]
+    # Check evidence collection structure
+    assert "user_history" in final_state["evidence"]
+    assert "device_history" in final_state["evidence"]
+    assert "location_history" in final_state["evidence"]
+    assert "previous_alerts" in final_state["evidence"]
+    assert "incident_history" in final_state["evidence"]
+    assert "ip_reputation" in final_state["evidence"]
+    
+    # Check tool_outputs exists
+    assert "tool_outputs" in final_state
+    assert "user_history" in final_state["tool_outputs"]
     
     # Check reasoning trace
     assert len(final_state["reasoning_trace"]) > 0

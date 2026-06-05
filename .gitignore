@@ -3,4 +3,10 @@ __pycache__/
 *.pyc
 .pytest_cache/
 *.db
+*.sqlite3
+.coverage
 .env
+node_modules/
+dist/
+build/
+*.egg-info/
