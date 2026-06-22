@@ -1,9 +1,10 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.schemas.security_event import SecurityEventCreate, SecurityEventResponse
 from app.services import security_event as event_service
+from app.core.broadcaster import broadcaster
 
 router = APIRouter()
 
@@ -17,9 +18,22 @@ router = APIRouter()
 def create_event(
     *,
     db: Session = Depends(get_db),
-    event_in: SecurityEventCreate
+    event_in: SecurityEventCreate,
+    background_tasks: BackgroundTasks
 ) -> SecurityEventResponse:
-    return event_service.create_security_event(db=db, obj_in=event_in)
+    event = event_service.create_security_event(db=db, obj_in=event_in)
+    
+    # Broadcast event after it is successfully committed
+    payload = {
+        "id": event.id,
+        "user_id": event.user_id,
+        "event_type": event.event_type,
+        "ip_address": event.ip_address,
+        "timestamp": event.timestamp.isoformat() if event.timestamp else None
+    }
+    background_tasks.add_task(broadcaster.broadcast, "new_event", payload)
+    
+    return event
 
 @router.get(
     "/",

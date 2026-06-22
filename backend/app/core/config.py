@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Optional, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -7,11 +7,14 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # SQLite Database connection string.
-    # Note: we use SQLite by default. When using SQLite, we also configure uvicorn/SQLAlchemy threads properly.
     SQLALCHEMY_DATABASE_URI: str = "sqlite:///./cyber_threat_platform.db"
 
-    # CORS configuration (useful for future web frontend connection)
-    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    # CORS configuration
+    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000", "http://localhost:5173"]
+
+    # LLM configuration (Phase 6A)
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_MODEL: str = "gpt-4o-mini"
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod

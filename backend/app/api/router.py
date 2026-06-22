@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import security_events, alerts, detection, investigations
+from app.api.endpoints import security_events, alerts, detection, investigations, stream
 
 api_router = APIRouter()
 
@@ -23,4 +23,9 @@ api_router.include_router(
     investigations.router,
     prefix="/investigations",
     tags=["Investigations"]
+)
+api_router.include_router(
+    stream.router,
+    prefix="/stream",
+    tags=["Stream"]
 )

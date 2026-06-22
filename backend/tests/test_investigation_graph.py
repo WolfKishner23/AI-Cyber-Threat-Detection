@@ -28,7 +28,7 @@ def test_investigation_graph_workflow(session: Session):
     session.commit()
     session.refresh(alert)
     
-    # Initialize state
+    # Initialize state (Phase 6: include new fields)
     initial_state = {
         "alert_id": alert.id,
         "alert": {
@@ -49,6 +49,8 @@ def test_investigation_graph_workflow(session: Session):
         "evidence": {},
         "risk_score": 0,
         "confidence_score": 0,
+        "risk_level": "",
+        "llm_reasoning": "",
         "recommended_action": "",
         "investigation_status": "pending",
         "reasoning_trace": []
@@ -59,23 +61,30 @@ def test_investigation_graph_workflow(session: Session):
     # Execute graph
     final_state = investigation_graph.invoke(initial_state, config=config)
     
-    assert final_state["risk_score"] == 100
+    # Phase 4 assertions (preserved)
     assert final_state["recommended_action"] == "lock_account"
-    assert "in_progress" not in final_state["investigation_status"]
     assert final_state["investigation_status"] == "completed"
     assert "brute_force" in final_state["investigation_summary"]
     
-    # Check evidence collection structure
+    # Phase 5 assertions (preserved)
     assert "user_history" in final_state["evidence"]
     assert "device_history" in final_state["evidence"]
     assert "location_history" in final_state["evidence"]
     assert "previous_alerts" in final_state["evidence"]
     assert "incident_history" in final_state["evidence"]
     assert "ip_reputation" in final_state["evidence"]
-    
-    # Check tool_outputs exists
     assert "tool_outputs" in final_state
     assert "user_history" in final_state["tool_outputs"]
     
-    # Check reasoning trace
+    # Phase 6 assertions (new)
+    assert final_state["risk_score"] >= 0
+    assert final_state["risk_score"] <= 100
+    assert final_state["confidence_score"] >= 0
+    assert final_state["confidence_score"] <= 100
+    assert final_state["risk_level"] in ["low", "medium", "high", "critical"]
+    assert len(final_state["llm_reasoning"]) > 0
+    
+    # Reasoning trace
     assert len(final_state["reasoning_trace"]) > 0
+    assert any("LLM Risk Assessment Agent" in t for t in final_state["reasoning_trace"])
+

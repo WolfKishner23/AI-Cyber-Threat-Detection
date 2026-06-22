@@ -62,6 +62,13 @@ def run_scenario(scenario_name: str, target_url: str, interval: float) -> bool:
                 response = client.post(target_url, json=event)
                 if response.status_code == 201:
                     print("Event stored successfully.")
+                    # Automatically trigger the detection engine for a realistic E2E flow
+                    detection_url = target_url.replace("/events/", "/detection/run")
+                    det_resp = client.post(detection_url)
+                    if det_resp.status_code == 200:
+                        alerts = det_resp.json().get('alerts_generated', 0)
+                        if alerts > 0:
+                            print(f"[{alerts} ALERT(S) GENERATED]")
                 else:
                     logger.error(f"Failed to store event: HTTP {response.status_code} - {response.text}")
             except httpx.RequestError as exc:

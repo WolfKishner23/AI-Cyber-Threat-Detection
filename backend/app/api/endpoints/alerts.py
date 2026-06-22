@@ -1,9 +1,10 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.schemas.alert import AlertCreate, AlertResponse, AlertSeverity, AlertStatus
 from app.services import alert as alert_service
+from app.core.broadcaster import broadcaster
 
 router = APIRouter()
 
@@ -17,10 +18,24 @@ router = APIRouter()
 def create_alert(
     *,
     db: Session = Depends(get_db),
-    alert_in: AlertCreate
+    alert_in: AlertCreate,
+    background_tasks: BackgroundTasks
 ) -> AlertResponse:
     try:
-        return alert_service.create_alert(db=db, obj_in=alert_in)
+        alert = alert_service.create_alert(db=db, obj_in=alert_in)
+        
+        # Broadcast alert after it is successfully committed
+        payload = {
+            "id": alert.id,
+            "event_id": alert.event_id,
+            "alert_type": alert.alert_type,
+            "severity": alert.severity,
+            "status": alert.status,
+            "created_at": alert.created_at.isoformat() if alert.created_at else None
+        }
+        background_tasks.add_task(broadcaster.broadcast, "new_alert", payload)
+        
+        return alert
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
