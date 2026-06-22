@@ -305,6 +305,87 @@ class LLMClient:
         logger.info(f"Autonomous Step: Action={parsed['action']}")
         return parsed
 
+    def plan_response(
+        self,
+        alert: Dict[str, Any],
+        investigation_summary: str,
+        evidence: Dict[str, Any],
+        risk_score: int,
+        confidence_score: int
+    ) -> Dict[str, str] | None:
+        """
+        Recommend an action using OpenAI if available.
+        Returns None if API key missing, failure, or invalid JSON.
+        """
+        if not self._api_key:
+            logger.debug("No API key — cannot plan response with LLM.")
+            return None
+
+        try:
+            return self._call_openai_plan_response(
+                alert, investigation_summary, evidence, risk_score, confidence_score
+            )
+        except Exception as exc:
+            logger.warning(
+                f"OpenAI plan response failed ({type(exc).__name__}: {exc}). "
+            )
+            return None
+
+    def _call_openai_plan_response(
+        self,
+        alert: Dict[str, Any],
+        investigation_summary: str,
+        evidence: Dict[str, Any],
+        risk_score: int,
+        confidence_score: int
+    ) -> Dict[str, str]:
+        from openai import OpenAI
+        from app.llm.prompts import build_response_planning_prompt
+
+        prompt = build_response_planning_prompt(
+            alert=alert,
+            investigation_summary=investigation_summary,
+            evidence=evidence,
+            risk_score=risk_score,
+            confidence_score=confidence_score
+        )
+
+        client = OpenAI(api_key=self._api_key)
+        response = client.chat.completions.create(
+            model=self._model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a cybersecurity response planning AI. "
+                        "Always respond with ONLY valid JSON. No markdown, no extra text."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.1,
+            max_tokens=300,
+        )
+
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+
+        parsed = json.loads(raw)
+        
+        # Validate schema
+        if "recommended_action" not in parsed or "reasoning" not in parsed:
+            raise ValueError("LLM returned malformed JSON for response planning.")
+            
+        logger.info(f"OpenAI response planning: Action={parsed['recommended_action']}")
+        return {
+            "recommended_action": str(parsed["recommended_action"]),
+            "reasoning": str(parsed["reasoning"])
+        }
+
     def generate_text(self, prompt: str) -> str | None:
         """
         Accepts a prompt and returns text from the model.

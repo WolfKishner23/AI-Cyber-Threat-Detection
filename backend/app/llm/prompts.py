@@ -56,3 +56,37 @@ Return ONLY this JSON (no markdown, no extra text):
   "confidence_score": <integer 0-100>,
   "reasoning": "<one to two sentence explanation>"
 }}"""
+
+
+def build_response_planning_prompt(
+    alert: Dict[str, Any], 
+    investigation_summary: str, 
+    evidence: Dict[str, Any], 
+    risk_score: int, 
+    confidence_score: int
+) -> str:
+    alert_type = alert.get("alert_type", "unknown")
+    severity   = alert.get("severity", "unknown")
+    
+    return f"""You are a cybersecurity response planning AI.
+Analyze the following alert, investigation summary, collected evidence, and risk score to recommend an appropriate response action.
+
+ALERT DETAILS:
+- Type: {alert_type}
+- Severity: {severity}
+
+INVESTIGATION SUMMARY:
+{investigation_summary}
+
+EVIDENCE COLLECTED:
+{json.dumps(evidence, indent=2)}
+
+RISK ASSESSMENT:
+- Risk Score: {risk_score}/100
+- Confidence Score: {confidence_score}/100
+
+Return ONLY this JSON (no markdown, no extra text):
+{{
+  "recommended_action": "<action from: lock_account, force_password_reset, notify_user, monitor>",
+  "reasoning": "<one to two sentence explanation of why this action is recommended>"
+}}"""

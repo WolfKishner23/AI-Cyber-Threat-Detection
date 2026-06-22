@@ -102,6 +102,7 @@ def test_cli_parsing():
 def test_api_submission_handling(mock_client_class):
     """
     Verify that run_scenario creates a client, runs requests, and handles success/error codes.
+    It should now also verify that the detection engine is triggered after each event.
     """
     # Mock HTTP response
     mock_response = MagicMock()
@@ -116,11 +117,28 @@ def test_api_submission_handling(mock_client_class):
     success = run_scenario(SCENARIO_NORMAL, "http://localhost:8000/api/events/", interval=0.01)
     
     assert success is True
-    # Verify post was called twice
-    assert mock_client.post.call_count == 2
+    # Verify post was called 4 times (2 events + 2 detection engine triggers)
+    assert mock_client.post.call_count == 4
     
     # Verify exact target URLs
-    called_url, called_kwargs = mock_client.post.call_args_list[0]
-    assert called_url[0] == "http://localhost:8000/api/events/"
-    assert called_kwargs["json"]["user_id"] == "usr_alice"
-    assert called_kwargs["json"]["event_type"] == "login"
+    # First call: Submit event 1
+    call1_url, call1_kwargs = mock_client.post.call_args_list[0]
+    assert call1_url[0] == "http://localhost:8000/api/events/"
+    assert call1_kwargs["json"]["user_id"] == "usr_alice"
+    assert call1_kwargs["json"]["event_type"] == "login"
+    
+    # Second call: Trigger detection for event 1
+    call2_url, call2_kwargs = mock_client.post.call_args_list[1]
+    assert call2_url[0] == "http://localhost:8000/api/detection/run"
+    assert "json" not in call2_kwargs or call2_kwargs["json"] is None
+    
+    # Third call: Submit event 2
+    call3_url, call3_kwargs = mock_client.post.call_args_list[2]
+    assert call3_url[0] == "http://localhost:8000/api/events/"
+    assert call3_kwargs["json"]["user_id"] == "usr_alice"
+    assert call3_kwargs["json"]["event_type"] == "logout"
+    
+    # Fourth call: Trigger detection for event 2
+    call4_url, call4_kwargs = mock_client.post.call_args_list[3]
+    assert call4_url[0] == "http://localhost:8000/api/detection/run"
+    assert "json" not in call4_kwargs or call4_kwargs["json"] is None
