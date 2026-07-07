@@ -12,6 +12,7 @@ class SecurityEvent(Base):
     location: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     ip_address: Mapped[str] = mapped_column(String(45), index=True, nullable=False)
     device_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    target_resource: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     
     # We use server_default=func.now() so database server handles time,
     # and default=datetime.utcnow for application level fallback.

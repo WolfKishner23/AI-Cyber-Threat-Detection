@@ -4,6 +4,9 @@ import time
 import logging
 from datetime import datetime
 import httpx
+import random
+from app.database.session import SessionLocal
+from app.models.customer import Customer
 
 from app.simulators.scenarios import (
     SCENARIOS_MAP,
@@ -24,7 +27,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("Simulator")
 
-def run_scenario(scenario_name: str, target_url: str, interval: float) -> bool:
+def run_scenario(scenario_name: str, target_url: str, interval: float, customer_profile: dict) -> bool:
     """
     Generate and post the sequence of events belonging to a scenario.
     """
@@ -36,7 +39,7 @@ def run_scenario(scenario_name: str, target_url: str, interval: float) -> bool:
     scenario_id = generate_scenario_id()
     # Use current time as the baseline for simulated timestamps
     base_time = datetime.utcnow()
-    events = generator_func(base_time, scenario_id)
+    events = generator_func(base_time, scenario_id, customer_profile)
     
     logger.info(f"\n========================================================")
     logger.info(f"Starting Scenario: {scenario_name.upper()}")
@@ -89,7 +92,7 @@ def main():
     parser.add_argument(
         "--url",
         type=str,
-        default="http://127.0.0.1:8000/api/v1/events/",
+        default="http://127.0.0.1:8001/api/v1/events/",
         help="FastAPI event creation endpoint URL."
     )
     parser.add_argument(
@@ -117,10 +120,31 @@ def main():
     logger.info("Initializing Security Event Simulator...")
     logger.info(f"Target URL: {args.url}")
     logger.info(f"Posting interval: {args.interval}s")
+
     logger.info(f"Selected scenario: {args.scenario}")
     logger.info(f"Execution count: {args.count if args.count > 0 else 'Infinite'}")
     
+    logger.info("Fetching customers from database...")
+    db = SessionLocal()
+    customers_db = db.query(Customer).all()
+    db.close()
+    
+    if not customers_db:
+        logger.error("No customers found in the database. Please run the seeder first.")
+        sys.exit(1)
+        
+    customer_profiles = [
+        {
+            "customer_id": c.customer_id,
+            "full_name": c.full_name,
+            "email": c.email,
+            "account_number": c.account_number
+        }
+        for c in customers_db
+    ]
+    
     scenarios_to_run = list(SCENARIOS_MAP.keys())
+
     if args.scenario != "all":
         scenarios_to_run = [args.scenario]
         
@@ -128,10 +152,12 @@ def main():
     try:
         while True:
             for scenario_name in scenarios_to_run:
+                customer_profile = random.choice(customer_profiles)
                 success = run_scenario(
                     scenario_name=scenario_name,
                     target_url=args.url,
-                    interval=args.interval
+                    interval=args.interval,
+                    customer_profile=customer_profile
                 )
                 if success:
                     run_count += 1

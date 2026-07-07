@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # SQLite Database connection string.
-    SQLALCHEMY_DATABASE_URI: str = "sqlite:///./cyber_threat_platform.db"
+    SQLALCHEMY_DATABASE_URI: str = "sqlite:///./cyber_threat_platform_v3.db"
 
     # CORS configuration
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000", "http://localhost:5173"]

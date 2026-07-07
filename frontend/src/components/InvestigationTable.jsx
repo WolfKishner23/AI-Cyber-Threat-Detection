@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import RiskBar from './RiskBar';
 
-const InvestigationTable = ({ investigations, onSelect }) => {
+const InvestigationTable = ({ investigations, onSelect, customerMap, maskAccount }) => {
   const [sortField, setSortField] = useState('id');
   const [sortAsc, setSortAsc] = useState(false);
 
@@ -61,7 +61,11 @@ const InvestigationTable = ({ investigations, onSelect }) => {
                   #{inv.id}
                 </div>
               </td>
-              <td style={{ fontFamily: 'monospace' }}>{inv.customer_id}</td>
+              <td>
+                  <div style={{ fontWeight: 500 }}>👤 {customerMap?.[inv.customer_id]?.full_name || inv.customer_id}</div>
+                  <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>Customer ID: {inv.customer_id}</div>
+                  {customerMap?.[inv.customer_id]?.account_number && <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>Account: {maskAccount(customerMap[inv.customer_id].account_number)}</div>}
+              </td>
               <td><RiskBar score={inv.risk_score} /></td>
               <td>{inv.confidence_score}%</td>
               <td style={{ color: 'var(--accent-blue)', fontWeight: 500 }}>{inv.recommended_action || 'N/A'}</td>

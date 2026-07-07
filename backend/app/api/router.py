@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import security_events, alerts, detection, investigations, stream
+from app.api.endpoints import security_events, alerts, detection, investigations, stream, customer
 
 api_router = APIRouter()
 
@@ -28,4 +28,9 @@ api_router.include_router(
     stream.router,
     prefix="/stream",
     tags=["Stream"]
+)
+api_router.include_router(
+    customer.router,
+    prefix="/customer",
+    tags=["Customer Authentication"]
 )

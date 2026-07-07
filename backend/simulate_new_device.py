@@ -14,7 +14,7 @@ db.query(SecurityEvent).filter(SecurityEvent.user_id == "usr_david").delete()
 db.commit()
 
 # 2. Get scenario
-events = get_new_device(datetime.now(timezone.utc), "debug_scenario_2")
+events = get_new_device(datetime.now(timezone.utc), "debug_scenario_2", {"customer_id": "usr_david", "name": "David", "risk_level": "medium"})
 
 # 3. Post to API
 for e in events:

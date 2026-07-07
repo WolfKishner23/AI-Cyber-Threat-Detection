@@ -19,8 +19,8 @@ class ImpossibleTravelRule(BaseDetectionRule):
 
     def analyze(self, events: List[SecurityEvent]) -> List[AlertCreate]:
         alerts = []
-        # Filter for login events
-        logins = [e for e in events if e.event_type == "login"]
+        # Filter for login and bank_account_access events
+        logins = [e for e in events if e.event_type in ("login", "bank_account_access")]
         
         # Group by user_id
         user_logins: Dict[str, List[SecurityEvent]] = {}
@@ -37,12 +37,16 @@ class ImpossibleTravelRule(BaseDetectionRule):
                 prev_event = sorted_events[i-1]
                 curr_event = sorted_events[i]
                 
+                print(f"Comparing {prev_event.id} ({prev_event.location}) to {curr_event.id} ({curr_event.location})")
+                
                 # Check if locations differ
                 if prev_event.location and curr_event.location and prev_event.location != curr_event.location:
                     # Check time difference < 6 hours
                     # Assuming timestamps are timezone-aware and comparable
                     time_diff = curr_event.timestamp - prev_event.timestamp
+                    print(f"Time diff: {time_diff}")
                     if timedelta(0) <= time_diff < timedelta(hours=6):
+                        print(f"Generating alert for {curr_event.id}")
                         alerts.append(
                             AlertCreate(
                                 event_id=curr_event.id,

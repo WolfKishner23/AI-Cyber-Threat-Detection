@@ -2,14 +2,14 @@
 
 This is a comprehensive, AI-powered platform for detecting, analyzing, and responding to cyber threats (e.g., suspicious banking logins) in real-time. It features a FastAPI backend, a LangGraph-powered LLM autonomous investigation agent, and a React-based real-time dashboard.
 
-## Architecture
+## Architecture & Data Flow
 
 ```mermaid
 graph TD
     A[Clients / Event Simulators] -->|POST /api/v1/events/| B(FastAPI Backend)
     B -->|Persists Event| DB[(SQLite DB)]
-    B --> C{Detection Engine}
-    C -->|Trigger Rule| D[Create Alert]
+    B --> C{Detection Engine & Behavioral Analysis}
+    C -->|Trigger Rule / Exceed Threshold| D[Create Alert]
     D -->|Persists Alert| DB
     D --> E[LangGraph Autonomous Agent]
     E -->|Tool Call / Context Gather| F[LLM Risk Assessment]
@@ -21,9 +21,55 @@ graph TD
     G -.->|SSE investigation_complete| H
 ```
 
+## Database Architecture
+
+```mermaid
+erDiagram
+    Customer ||--o{ SecurityEvent : generates
+    Customer ||--o{ TrustedDevice : owns
+    Customer ||--o{ LoginHistory : has
+    SecurityEvent ||--o{ Alert : triggers
+    Alert ||--o| Investigation : undergoes
+    
+    Customer {
+        string customer_id PK
+        string password
+        string full_name
+        string email
+        string account_number
+    }
+    
+    SecurityEvent {
+        int id PK
+        string user_id FK
+        string event_type
+        string location
+        string ip_address
+        datetime timestamp
+        json raw_payload
+    }
+    
+    Alert {
+        int id PK
+        int event_id FK
+        string alert_type
+        string severity
+        string status
+    }
+    
+    Investigation {
+        int id PK
+        int alert_id FK
+        text llm_analysis
+        text gathered_context
+        string status
+    }
+```
+
 ## Features
 - **Security Event Ingestion**: Robust endpoints to log authentication attempts, IP metadata, and user actions.
-- **Heuristic Detection Engine**: Instantly flags impossible travel, brute-force attacks, and unrecognized devices.
+- **Behavioral Analysis Engine**: Evaluates real-time logins against historical patterns to flag impossible travel, unknown devices, and unusual login times.
+- **Brute-Force & High-Risk Detection**: Instantly flags high-risk demo locations and blocks brute-force attempts after a configured limit.
 - **LLM-Powered Investigation**: Uses `LangGraph` and OpenAI to autonomously collect historical evidence (IP reputation, past alerts) and evaluate fraud risk with human-like analytical reasoning.
 - **Real-Time Streaming**: Server-Sent Events (SSE) stream login data, alerts, and completed investigation records directly to the dashboard in real time.
 - **Frontend Dashboard**: A premium, responsive React interface built with Vite, styled with glassmorphism to monitor threats at a glance.

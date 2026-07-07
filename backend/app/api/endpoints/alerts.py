@@ -5,6 +5,7 @@ from app.database.session import get_db
 from app.schemas.alert import AlertCreate, AlertResponse, AlertSeverity, AlertStatus
 from app.services import alert as alert_service
 from app.core.broadcaster import broadcaster
+from app.services.investigation import run_autonomous_investigation_task
 
 router = APIRouter()
 
@@ -34,6 +35,9 @@ def create_alert(
             "created_at": alert.created_at.isoformat() if alert.created_at else None
         }
         background_tasks.add_task(broadcaster.broadcast, "new_alert", payload)
+        
+        # Trigger autonomous investigation for the new alert
+        background_tasks.add_task(run_autonomous_investigation_task, alert_id=alert.id)
         
         return alert
     except ValueError as e:

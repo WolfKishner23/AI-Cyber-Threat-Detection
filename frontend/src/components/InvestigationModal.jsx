@@ -3,7 +3,9 @@ import { X, ShieldAlert, Cpu, Database, ChevronDown, ChevronRight, CheckCircle2 
 import ProgressIndicator from './ProgressIndicator';
 import RiskBar from './RiskBar';
 
-const InvestigationModal = ({ inv, onClose }) => {
+const InvestigationModal = ({ inv, onClose, customerMap, maskAccount }) => {
+  const profile = customerMap?.[inv.customer_id];
+  const customerName = profile?.full_name || inv.customer_id;
   const [openSection, setOpenSection] = useState('summary');
   
   let badgeClass = 'low';
@@ -64,7 +66,7 @@ const InvestigationModal = ({ inv, onClose }) => {
                 <span className={`badge ${badgeClass}`} style={{ marginLeft: '1rem' }}>{riskLevel}</span>
               </h2>
               <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                Customer ID: {inv.customer_id} • Alert ID: #{inv.alert_id} • Generated {new Date(inv.created_at).toLocaleString()}
+                👤 {customerName} • Customer ID: {inv.customer_id} {profile?.account_number ? `• Account: ${maskAccount(profile.account_number)}` : ''} • Alert ID: #{inv.alert_id} • Generated {new Date(inv.created_at).toLocaleString()}
               </span>
             </div>
           </div>

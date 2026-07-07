@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from app.models.alert import Alert
 from app.models.security_event import SecurityEvent
 from app.schemas.alert import AlertCreate, AlertUpdate
+from fastapi import BackgroundTasks
+from app.core.broadcaster import broadcaster
 
 def get_alert_by_id(db: Session, alert_id: int) -> Optional[Alert]:
     """
@@ -27,7 +29,7 @@ def get_alerts(
     if severity:
         query = query.filter(Alert.severity == severity)
         
-    return query.offset(skip).limit(limit).all()
+    return query.order_by(Alert.id.desc()).offset(skip).limit(limit).all()
 
 def create_alert(db: Session, obj_in: AlertCreate) -> Alert:
     """
@@ -70,3 +72,51 @@ def update_alert(
     db.commit()
     db.refresh(db_obj)
     return db_obj
+
+def create_and_broadcast_alert(
+    db: Session,
+    background_tasks: BackgroundTasks,
+    event: SecurityEvent,
+    alert_type: str,
+    severity: str,
+    status: str = "open"
+) -> Alert:
+    """
+    Creates an alert and immediately broadcasts it via SSE.
+    Avoids duplicate alerts for the same event and type.
+    """
+    existing = db.query(Alert).filter(Alert.event_id == event.id, Alert.alert_type == alert_type).first()
+    if existing:
+        return existing
+        
+    new_alert = Alert(
+        event_id=event.id,
+        alert_type=alert_type,
+        severity=severity,
+        status=status,
+    )
+    db.add(new_alert)
+    db.commit()
+    db.refresh(new_alert)
+    
+    alert_sse = {
+        "id": new_alert.id,
+        "event_id": new_alert.event_id,
+        "alert_type": new_alert.alert_type,
+        "severity": new_alert.severity,
+        "status": new_alert.status,
+        "created_at": new_alert.created_at.isoformat() if new_alert.created_at else None,
+        "event": {
+            "id": event.id,
+            "user_id": event.user_id,
+            "event_type": event.event_type,
+            "location": event.location,
+            "ip_address": event.ip_address,
+            "device_name": event.device_name,
+            "timestamp": event.timestamp.isoformat() if event.timestamp else None,
+            "raw_payload": event.raw_payload,
+        }
+    }
+    background_tasks.add_task(broadcaster.broadcast, "new_alert", alert_sse)
+    
+    return new_alert

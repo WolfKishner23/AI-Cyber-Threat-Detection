@@ -27,7 +27,7 @@ def get_security_events(
     if user_id:
         query = query.filter(SecurityEvent.user_id == user_id)
         
-    return query.offset(skip).limit(limit).all()
+    return query.order_by(SecurityEvent.id.desc()).offset(skip).limit(limit).all()
 
 def create_security_event(db: Session, obj_in: SecurityEventCreate) -> SecurityEvent:
     """

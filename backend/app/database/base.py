@@ -5,4 +5,5 @@ from app.models.security_event import SecurityEvent  # noqa
 from app.models.alert import Alert  # noqa
 from app.models.detection_run import DetectionRun  # noqa
 from app.models.investigation import Investigation  # noqa
+from app.models.customer import Customer, TrustedDevice, LoginHistory  # noqa
 
