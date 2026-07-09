@@ -1,5 +1,8 @@
 # AI Cyber Threat Investigation & Response Platform
 
+![SOC Dashboard](docs/images/dashboard.png)
+![Investigation Summary](docs/images/investigation.png)
+
 This is a comprehensive, AI-powered platform for detecting, analyzing, and responding to cyber threats (e.g., suspicious banking logins) in real-time. It features a FastAPI backend, a LangGraph-powered LLM autonomous investigation agent, and a React-based real-time dashboard.
 
 ## Architecture & Data Flow
