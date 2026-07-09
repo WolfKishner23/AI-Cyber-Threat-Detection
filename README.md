@@ -1,9 +1,24 @@
 # AI Cyber Threat Investigation & Response Platform
 
-![SOC Dashboard](docs/images/dashboard.png)
-![Investigation Summary](docs/images/investigation.png)
+<p align="center">
+  <img src="docs/images/dashboard.png" width="48%" alt="SOC Dashboard" />
+  <img src="docs/images/investigation.png" width="48%" alt="Investigation Summary" />
+</p>
 
 This is a comprehensive, AI-powered platform for detecting, analyzing, and responding to cyber threats (e.g., suspicious banking logins) in real-time. It features a FastAPI backend, a LangGraph-powered LLM autonomous investigation agent, and a React-based real-time dashboard.
+
+## Risk Scoring Model
+
+The behavioral engine assigns point-based risk scores for each event. These act as baseline heuristics before the LLM takes over:
+- **Impossible Travel**: +50 (Login from distant city in an impossibly short timeframe)
+- **Brute Force / Failed Logins**: +30 (Base weight, scales up based on consecutive failures)
+- **New Device**: +25 (Device ID not seen before)
+- **New Location**: +20 (City/Country never seen before)
+- **Unusual Login Time**: +15 (Significantly deviating from historical mean login hours)
+- **Malicious IP / High-Risk Location**: Override to 90 (Critical severity for known hostile ranges like North Korea, etc.)
+- **Trusted Device / Known Location**: -10 (Reduces score for recognized patterns)
+
+Scores are capped at 100. If the risk exceeds configurable thresholds, it triggers a `high` or `critical` alert, launching the LangGraph AI investigation.
 
 ## Architecture & Data Flow
 
